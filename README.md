@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Wallet Adapter Test Project
 
-## Getting Started
+See https://github.com/anza-xyz/wallet-adapter/pull/949
 
-First, run the development server:
+## Steps taken
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1. Create a NextJS app with all defaults, just using npm:
+
+```sh
+$ npx create-next-app@latest
+✔ What is your project named? … ledger-test
+✔ Would you like to use TypeScript? … No / Yes (Yes)
+✔ Would you like to use ESLint? … No / Yes (No)
+✔ Would you like to use Tailwind CSS? … No / Yes (No)
+✔ Would you like to use `src/` directory? … No / Yes (No)
+✔ Would you like to use App Router? (recommended) … No / Yes (Yes)
+✔ Would you like to customize the default import alias (@/*)? … No / Yes (No)
+Creating a new Next.js app in ~/scratch/wallet-adapter-ledger-test/ledger-test.
+
+Using npm.
+
+<snip>
+
+Success! Created ledger-test at ~/scratch/wallet-adapter-ledger-test/ledger-test
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install wallet-adapter dependencies:
+```sh
+$ npm install --save \
+    @solana/wallet-adapter-base \
+    @solana/wallet-adapter-react \
+    @solana/wallet-adapter-react-ui \
+    @solana/wallet-adapter-wallets \
+    @solana/web3.js \
+    react
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Add a new component `app/client-layout.tsx`
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+(Equivalent of `pages/_app.tsx` without app directory)
 
-## Learn More
+```tsx
+"use client";
 
-To learn more about Next.js, take a look at the following resources:
+import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
+import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
+import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import { UnsafeBurnerWalletAdapter, LedgerWalletAdapter } from "@solana/wallet-adapter-wallets";
+import { clusterApiUrl } from "@solana/web3.js";
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+// Default styles that can be overridden by your app
+require('@solana/wallet-adapter-react-ui/styles.css');
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+export default function ClientLayout({
+    children
+}: Readonly<{
+    children: React.ReactNode
+}>) {
+    const network = WalletAdapterNetwork.Devnet;
+    const endpoint = clusterApiUrl(network);
+    const wallets = [
+        new UnsafeBurnerWalletAdapter(),
+        new LedgerWalletAdapter(),
+    ]
 
-## Deploy on Vercel
+    return (
+        <ConnectionProvider endpoint={endpoint}>
+            <WalletProvider wallets={wallets} autoConnect>
+                <WalletModalProvider>
+                    {children}
+                </WalletModalProvider>
+            </WalletProvider>
+        </ConnectionProvider>
+    );
+}
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+And then update `layout.tsx` to wrap childen in `ClientLayout`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+4. Add the `WalletMultiButton` to page.tsx
+
+- Add `"use client";` at the top
+- Replace description content:
+```tsx
+<div className={styles.description}>
+    <WalletMultiButton />
+</div>
+```
